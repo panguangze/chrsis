@@ -1,7 +1,7 @@
 /.empty/*
-_pycache_/
-/bioutensil/_pycache_/*
-/bioutensil/bioutensil/_pycache_/*
+__pycache__/
+/bioutensil/__pycache__/*
+/bioutensil/bioutensil/__pycache__/*
 /bioutensil/bio_database/*
-/bioutensil/bplot/_pycache_/*
-/bioutensil/mymath/_pycache_/*
+/bioutensil/bplot/__pycache__/*
+/bioutensil/mymath/__pycache__/*
