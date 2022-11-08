@@ -1,5 +1,5 @@
 /.empty/*
-/_pycache_/*
+_pycache_/
 /bioutensil/_pycache_/*
 /bioutensil/bioutensil/_pycache_/*
 /bioutensil/bio_database/*
