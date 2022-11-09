@@ -114,8 +114,8 @@ class SVBkpRegion():
                 continue
             if record.chrom_5p not in constants.chrs or record.chrom_3p not in constants.chrs:
                 continue
-            if record.chrom_5p != 'chr7':
-                pass
+            # if record.chrom_5p != 'chr7':
+            #     pass
 
             b, bs = self._sv_in_regions(record)
             if b:

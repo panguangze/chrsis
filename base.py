@@ -118,15 +118,15 @@ class RegionGroup(myio.Record):
                 abs(sv.bkpos_5p - sv.bkpos_3p) <= self.linkage_distance:
             start = min(sv.bkpos_5p, sv.bkpos_3p)
             end = max(sv.bkpos_5p, sv.bkpos_3p)
-            region = Region(chrom=sv.chrom_5p, start=start, end=end)
+            region = Region(chrom=sv.chrom_5p, start=start, end=end, linkage_distance=self.linkage_distance)
             region.append_sv(sv, self.tran_psl_reader)
             self.append_region(region)
         else:
-            region = Region(chrom=sv.chrom_5p, start=sv.bkpos_5p, end=sv.bkpos_5p)
+            region = Region(chrom=sv.chrom_5p, start=sv.bkpos_5p, end=sv.bkpos_5p, linkage_distance=self.linkage_distance)
             region.append_sv(sv, self.tran_psl_reader)
             self.append_region(region)
 
-            region = Region(chrom=sv.chrom_3p, start=sv.bkpos_3p, end=sv.bkpos_3p)
+            region = Region(chrom=sv.chrom_3p, start=sv.bkpos_3p, end=sv.bkpos_3p, linkage_distance=self.linkage_distance)
             region.append_sv(sv, self.tran_psl_reader)
             self.append_region(region)
 

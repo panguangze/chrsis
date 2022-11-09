@@ -44,7 +44,6 @@ class ComplexSVRegionGroupGenerator():
         # print(kwargs)
 
     def compare(self, sv1, sv2):
-        print(sv1)
         if int(sv1.bkpos_5p) < int(sv2.bkpos_5p):
             return -1
         elif int(sv1.bkpos_5p) > int(sv2.bkpos_5p):
@@ -116,8 +115,7 @@ class ComplexSVRegionGroupGenerator():
         # cluster = []
         svIdx = list(range(0, len(juncs))) # sv index for selection
         while len(svIdx) > 0:
-            subcluster = base.RegionGroup()
-            print(type(juncs[svIdx[0]]))
+            subcluster = base.RegionGroup(linkage_distance = int(self.args['maxDis']))
             subcluster.append_sv(juncs[svIdx[0]])
             queue = [svIdx[0]] # index of sv_info
             sv, chr_range = juncs[svIdx[0]], {}
@@ -144,7 +142,6 @@ class ComplexSVRegionGroupGenerator():
         self._cluster()
         cnt_dict = {}
         for i, group in enumerate(self.groups):
-
             # filter
             group_type = group.group_type
 
@@ -283,6 +280,7 @@ def run_call(**args):
     # sv_records = sv.read_vcf(args['sv_fn'],tool=args['tool'])
     # sv_records = sv.parse(args['sv_fn'])
     sv_records = sv.read_txt(args['sv_fn'])
+    # print(sv_records)
     groups = ComplexSVRegionGroupGenerator(
         groups=groups,
         sv_records=sv_records,

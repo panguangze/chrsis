@@ -3,6 +3,7 @@ import vcf
 import collections
 
 from bioutensil import myio
+from bioutensil import constants
 
 
 class SVRecord(myio.Record):
@@ -322,8 +323,8 @@ class SVRecord(myio.Record):
         breakend is tail (based on - strand): alt.orientation == False
         '''
         if not self.parent:
-            return None
-
+            return get_orientation_by_strand(self, constants.chrs)
+            # return None
         alt = self.parent.ALT[0]
         if alt.remoteOrientation and alt.orientation:
             o = 'tt'
