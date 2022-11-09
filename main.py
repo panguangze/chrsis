@@ -138,6 +138,7 @@ class ComplexSVRegionGroupGenerator():
                             # print(subcluster)
             # if self.hasFBI(subcluster, juncs) == True:
             self.groups.append(subcluster)
+        # print(self.groups)
     def call(self):
         # self._group_sv()
         self._cluster()
@@ -279,8 +280,9 @@ def run_call(**args):
     groups = [base.RegionGroup(region_list=[region])]
     '''
     groups = []
-    sv_records = sv.read_vcf(args['sv_fn'],tool=args['tool'])
-
+    # sv_records = sv.read_vcf(args['sv_fn'],tool=args['tool'])
+    # sv_records = sv.parse(args['sv_fn'])
+    sv_records = sv.read_txt(args['sv_fn'])
     groups = ComplexSVRegionGroupGenerator(
         groups=groups,
         sv_records=sv_records,

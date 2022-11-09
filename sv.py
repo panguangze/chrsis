@@ -376,6 +376,13 @@ class SVRecord(myio.Record):
         except Exception:
             return self.meta_info.get('VARTYPE', None)
 
+def read_txt(vcf_fn,**args):
+    fin = open(vcf_fn)
+    for line in fin.readlines():
+        sv_record = SVRecord()
+        sv_record.parse(line)
+        yield sv_record
+        
 
 def read_vcf(vcf_fn, tool='svaba', precise=True, id2genes={}, barcode2clone={}, **args):
     for vcf_record in vcf.Reader(filename=vcf_fn):
