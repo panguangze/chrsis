@@ -203,7 +203,15 @@ class SVBkpRegion():
         if region:
             bkp_list = [bkp.bkpos for bkp in region.bkp_list]
         else:
-            bkp_list = [bkp.bkpos for r in self.regions for bkp in r.bkp_list]
+            # bkp_list = [bkp.bkpos for r in self.regions for bkp in r.bkp_list]
+            bkps = [bkp for r in self.regions for bkp in r.bkp_list]
+            # bkps.sort(key = lambda x : x.bkpos)
+            bkps_no_dup = []
+            bkps_no_dup.append(bkps[0])
+            for i in range(1, len(bkps)):
+                if bkps[i].bkpos != bkps[i - 1].bkpos:
+                    bkps_no_dup.append(bkps[i])
+            bkp_list = [bkp.bkpos for bkp in bkps_no_dup]
 
         adjacent_distances = [x - y for x, y in zip(bkp_list[1:], bkp_list[:-1])]
         reject, pvalue = significant_test.exponent_distribution(adjacent_distances)
@@ -240,7 +248,15 @@ class SVBkpRegion():
         if region:
             bkp_join = [bkp.join_type for bkp in region.bkp_list]
         else:
-            bkp_join = [bkp.join_type for r in self.regions for bkp in r.bkp_list]
+            bkps = [bkp for r in self.regions for bkp in r.bkp_list]
+            # bkps.sort(key = lambda x : x.bkpos)
+            bkps_no_dup = []
+            bkps_no_dup.append(bkps[0])
+            for i in range(1, len(bkps)):
+                if bkps[i].bkpos != bkps[i - 1].bkpos:
+                    bkps_no_dup.append(bkps[i])
+            bkp_join = [bkp.join_type for bkp in bkps_no_dup]
+            # bkp_join = [bkp.join_type for r in self.regions for bkp in r.bkp_list]
 
         bkp_join = collections.Counter(bkp_join)
         for orientation in 'ht,th,tt,hh'.split(','):
@@ -292,7 +308,18 @@ class SVBkpRegion():
         if region:
             bkp_orientation = [bkp.orientation for bkp in region.bkp_list]
         else:
-            bkp_orientation = [bkp.orientation for r in self.regions for bkp in r.bkp_list]
+            # bkps = []
+            # for r in self.regions:
+            #     for bkp in r.bkp_list:
+            #         if bkp
+            bkps = [bkp for r in self.regions for bkp in r.bkp_list]
+            bkps.sort(key = lambda x : x.bkpos)
+            bkps_no_dup = []
+            bkps_no_dup.append(bkps[0])
+            for i in range(1, len(bkps)):
+                if bkps[i].bkpos != bkps[i - 1].bkpos:
+                    bkps_no_dup.append(bkps[i])
+            bkp_orientation = [b.orientation for b in bkps_no_dup]
 
         reject, pvalue, n_runs = significant_test.wald_wolfowitz_test(bkp_orientation)
         if reject is None:

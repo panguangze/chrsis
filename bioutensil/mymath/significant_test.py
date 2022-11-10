@@ -47,7 +47,7 @@ def wald_wolfowitz_test(x):
         return None, None, None
     if len(x) <= 2:
         return None, None, None
-    p, z, n_runs, sd, mean = wald_wolfowitz(x).values()
+    z, mean, sd, p ,n_runs = wald_wolfowitz(x).values()
     return p < 0.05, p, int(n_runs)/float(len(x))
 
 
