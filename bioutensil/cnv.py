@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-    tenxtools.cnv
+    cnv.cnv
     ~~~~~~~~~~~~~
 
     copy number variant
@@ -8,11 +8,18 @@
     @Copyright: (c) 2018-07 by Lingxi Chen (chanlingxi@gmail.com).
     @License: LICENSE_NAME, see LICENSE for more details.
 """
+import pandas as pd
 
-from tenxtools.utils import io
+from bioutensil import myio
+from bioutensil import module
 
 
-class CNVRecord(io.Record):
+def read_cnv_fn(cnv_fn):  # original csv file
+    df = pd.read_csv(cnv_fn, index_col=0)
+    return df
+
+
+class CNVRecord(myio.Record):
 
     fields = 'id,chr,start,end,np,mean,arm,snvs,ai,median,Cn,mCn,fullCN,meanCn,purity'.split(',')  # tumor_percent
 
@@ -35,6 +42,7 @@ class CNVRecord(io.Record):
             fullCN=None,
             meanCn=None,
             purity=None,
+            args=None,
             **kwargs):
 
         self.id = self._validate(id, int)
@@ -61,22 +69,30 @@ class CNVRecord(io.Record):
         return ','.join(str(getattr(self, field)) for field in self.fields)
 
 
-class CNVReader(io.Reader):
+class CNVReader(myio.Reader):
 
-    def __init__(self, fn, cnv_cls=CNVRecord, sep=',', has_header=True):
-        super(CNVReader, self).__init__(fn, record_cls=cnv_cls, sep=sep, has_header=has_header)
+    def __init__(self, cnv_cls=CNVRecord, sep='\t', has_header=True, *args, **kwargs):
+        super(CNVReader, self).__init__(record_cls=cnv_cls, sep=sep, has_header=has_header, *args, **kwargs)
 
 
-class CNVWriter(io.Writer):
+class CNVWriter(myio.Writer):
 
-    def __init__(self, fn, cnv_cls=CNVRecord, sep=','):
-        super(CNVWriter, self).__init__(fn, record_cls=cnv_cls, sep=sep)
+    def __init__(self, cnv_cls=CNVRecord, sep='\t', *args, **kwargs):
+        super(CNVWriter, self).__init__(record_cls=cnv_cls, sep=sep, *args, **kwargs)
 
-'''
-if __name__ == "__main__":
-    fn = '/home/chenlingxi/mnt/chenlingxi/workspace/FS_Projects/WHOC.WGS_10X.batch01/CNACalling/patchwork/OC001/OC001/oc001t_Copynumbers.csv'
 
-    for i, record in enumerate(CNVReader(fn)):
-        meta, record = record
-        print record.start, record.end, (record.end - record.start) / 1000
-'''
+class CNVGenerator(module.Module):
+
+    def __init__(self, reader_cls=CNVReader, writer_cls=CNVWriter, *args, **kwargs):
+        super(CNVGenerator, self).__init__(reader_cls=reader_cls, writer_cls=writer_cls,
+                                           *args, **kwargs)
+    def __iter__(self):
+        for i, record in enumerate(self.in_iter):
+            print(record)
+            meta, record = record
+            yield meta, record
+
+
+# if __name__ == "__main__":
+#     fn = '/home/chenlingxi/mnt/chenlingxi/workspace/FS_Projects/WHOC.WGS_10X.batch01/CNACalling/patchwork/OC001/OC001/oc001t_Copynumbers.csv'
+#     CNVGenerator(in_data=fn).evaluate()

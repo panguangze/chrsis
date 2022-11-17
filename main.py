@@ -11,7 +11,8 @@
     @License: LICENSE_NAME, see LICENSE for more details.
 
 Usage:
-    complexsv.py call --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --maxDis=MAXDIS --maxRange=MAXRANGE
+    complexsv.py call --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --maxDis=MAXDIS --maxRange=MAXRANGE --cnv_fn=CNV_FN
+    complexsv.py cnv --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --maxDis=MAXDIS --maxRange=MAXRANGE --cnv_fn=CNV_FN
     complexsv.py -h | --help
 
 Options:
@@ -33,6 +34,7 @@ import base
 import  bplot_complexsv
 import chromothripsis
 
+MIN_SV_NUM = 6
 
 class ComplexSVRegionGroupGenerator():
 
@@ -268,6 +270,8 @@ class ComplexSVRegionGroupGenerator():
                 if b:
                     self.regions[i].append_sv(record, self.tran_psl_reader)
 
+def run_cnv(**args):
+    chromothripsis.run_cnv_state(**args)
 
 def run_call(**args):
     '''
@@ -288,28 +292,31 @@ def run_call(**args):
     ).call()
 
     for g in groups:
-        print('group', g.group_type, g.region_list)
+        if g.sv_num() <= MIN_SV_NUM:
+            # print()
+            continue
+        # print('group', g.group_type, g.region_list,chromo_metrics["chromothripsis"])
         chromo_metrics = chromothripsis.evaluate_region(regions=g.region_list, call='group', search=False, **args)
+        if chromo_metrics["chromothripsis"]:
+            print(g.region_list,chromo_metrics["chromothripsis"])
         # if chromo_metrics['cluster'] and chromo_metrics['random_walk']:
-        print(chromo_metrics)
+        # print(chromo_metrics["chromothripsis"])
 
-    '''
-    groups = list(groups)
-    data = {}
-    for meta, group in groups:
-        if meta in data:
-            data[meta].append((meta, group))
-        else:
-            data[meta] = [(meta, group)]
+    # groups = list(groups)
+    # data = {}
+    # for meta, group in groups:
+    #     if meta in data:
+    #         data[meta].append((meta, group))
+    #     else:
+    #         data[meta] = [(meta, group)]
 
-    for meta, group_list in data.items():
-        out_prefix = os.path.join(args['out_dir'], '{}.{}.region'.format(args['sample'], meta))
-        bplot_complexsv.run(draw=True,
-                            groups=group_list,
-                            out_prefix=out_prefix,
-                            **args)
-    return groups, None
-    '''
+    # for meta, group_list in data.items():
+    #     out_prefix = os.path.join(args['out_dir'], '{}.{}.region'.format(args['sample'], meta))
+    #     bplot_complexsv.run(draw=True,
+    #                         groups=group_list,
+    #                         out_prefix=out_prefix,
+    #                         **args)
+    # return groups, None
 
 
 def run_draw(**args):
@@ -337,9 +344,11 @@ def run_draw(**args):
     return groups, None
 
 
-def run(call=None, **args):
+def run(call=None,cnv=None, **args):
     if call:
         run_call(**args)
+    elif cnv:
+        run_cnv(**args)
 
 
 if __name__ == "__main__":

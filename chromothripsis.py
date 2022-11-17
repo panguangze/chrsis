@@ -5,22 +5,25 @@ import numpy as np
 import collections
 
 from bioutensil.mymath import significant_test
-
+from bioutensil import myio
+from bioutensil import cnv
 from bioutensil import constants
 
 import base
+from bioutensil import module
 
-'''
-class CNVState():
+class CNVState(module.Module):
 
-    def __init__(self, reader_cls=cnv.CNVReader, writer_cls=myio.Writer, *args, **kwargs):
-        pass
+    def __init__(self, reader_cls=cnv.CNVReader, writer_cls=cnv.CNVWriter, *args, **kwargs):
+        super(CNVState, self).__init__(reader_cls=reader_cls, writer_cls=writer_cls,
+                                           *args, **kwargs)
 
     def __iter__(self):
         res = {}
         # look through
         for i, record in enumerate(self.in_iter):
             meta, record = record
+            print(record)
             region = record.chr + record.arm
             state_set = res.get(region, set([]))
             state_set.add(record.Cn)
@@ -54,8 +57,6 @@ class CNVState():
                     'cn_state': list(state_set)
                 }
                 yield None, myio.Record(args=args)
-'''
-
 
 class SVBkpLocation():
 
@@ -327,19 +328,21 @@ class SVBkpRegion():
         return not reject, pvalue, n_runs
 
 
-'''
 def run_cnv_state(**args):
 
     cnv_fn = args['cnv_fn']
-    cnv_states = CNVState(
-        in_fn=cnv_fn,
-        write=True,
-        suffix='cn_state',
-        **args
-    ).evaluate()
+    for item in cnv.CNVGenerator(in_fn=cnv_fn,**args):
+        # print(item)
+        pass
+    # cnv_states = CNVState(
+    #     in_fn=cnv_fn,
+    #     file_type='csv',
+    #     write=True,
+    #     suffix='cn_state',
+    #     **args
+    # )
 
-    return cnv_states, None
-'''
+    # return cnv_states, None
 
 
 def run_bkp_location(sv_module, **args):
@@ -390,12 +393,11 @@ def parse_region(region_module, **args):
 
 def run_call(sv_module=None, **args):
     # run_bkp_location(sv_module=sv_module, **args)
-    '''
     cnv_states, _ = run_cnv_state(**args)
 
     regions = [x.region for m, x in cnv_states]
-    '''
-    regions = [base.Region(chrom=chrom, start=0, end=constants.hg19_fai_bp[chrom]) for chrom in constants.chrs]
+    print(regions)
+    # regions = [base.Region(chrom=chrom, start=0, end=constants.hg19_fai_bp[chrom]) for chrom in constants.chrs]
     evaluate_region(sv_module=sv_module, regions=regions, search=False, **args)
 
 
