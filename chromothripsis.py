@@ -11,52 +11,74 @@ from bioutensil import constants
 
 import base
 from bioutensil import module
+# Python code for run length encoding
+# wwwwaaadexxxxxxww -> [w 4 a 3 d 1 e 1 x 6 w 2]
+def rle(data: str):
+    
+    seq = [data[0], 1]
 
-class CNVState(module.Module):
+    for elem in data[1:]:
+        if elem != seq[-2]: 
+            seq += [elem, 1]
+        else:
+            seq[-1] += 1
+    return seq
 
-    def __init__(self, reader_cls=cnv.CNVReader, writer_cls=cnv.CNVWriter, *args, **kwargs):
-        super(CNVState, self).__init__(reader_cls=reader_cls, writer_cls=writer_cls,
-                                           *args, **kwargs)
+def max_oscillation(x, vec):
+    vec_l = len(vec)
+    diff = vec[0:(vec_l - 2)] - vec[2: vec_l]
+    oscillation = [x if i == 0 else 0 for i in diff]
+    rle_vec = rle(oscillation)
+    x_oscillation_values = []
+    for idx, item in enumerate(rle_vec):
+        if idx % 2 == 0 and idx == x:
+            x_oscillation_values.append(rle_vec[idx + 1])
+    return max(x_oscillation_values)
+# class CNVState(module.Module):
 
-    def __iter__(self):
-        res = {}
-        # look through
-        for i, record in enumerate(self.in_iter):
-            meta, record = record
-            print(record)
-            region = record.chr + record.arm
-            state_set = res.get(region, set([]))
-            state_set.add(record.Cn)
-            res[region] = state_set
+#     def __init__(self, reader_cls=cnv.CNVReader, writer_cls=cnv.CNVWriter, *args, **kwargs):
+#         super(CNVState, self).__init__(reader_cls=reader_cls, writer_cls=writer_cls,
+#                                            *args, **kwargs)
 
-        # merge p-arm and q-arm if states are same
-        for chrom in constants.chrs:
-            p = '{}p'.format(chrom)
-            q = '{}q'.format(chrom)
-            if p in res and q in res:
-                if res[p] == res[q]:
-                    region = base.Region(chrom=chrom)
-                    res[str(region)] = res[p]
-                else:
-                    res[str(base.Region(chrom=chrom, arm='p'))] = res[p]
-                    res[str(base.Region(chrom=chrom, arm='q'))] = res[q]
-                del res[p]
-                del res[q]
+#     def __iter__(self):
+#         res = {}
+#         # look through
+#         for i, record in enumerate(self.in_iter):
+#             meta, record = record
+#             print(record)
+#             region = record.chr + record.arm
+#             state_set = res.get(region, set([]))
+#             state_set.add(record.Cn)
+#             res[region] = state_set
 
-            elif p in res:
-                res[str(base.Region(chrom=chrom, arm='p'))] = res[p]
-                del res[p]
-            elif q in res:
-                res[str(base.Region(chrom=chrom, arm='q'))] = res[q]
-                del res[q]
+#         # merge p-arm and q-arm if states are same
+#         for chrom in constants.chrs:
+#             p = '{}p'.format(chrom)
+#             q = '{}q'.format(chrom)
+#             if p in res and q in res:
+#                 if res[p] == res[q]:
+#                     region = base.Region(chrom=chrom)
+#                     res[str(region)] = res[p]
+#                 else:
+#                     res[str(base.Region(chrom=chrom, arm='p'))] = res[p]
+#                     res[str(base.Region(chrom=chrom, arm='q'))] = res[q]
+#                 del res[p]
+#                 del res[q]
 
-        for region, state_set in res.items():
-            if len(state_set) == 2:
-                args = {
-                    'region': region,
-                    'cn_state': list(state_set)
-                }
-                yield None, myio.Record(args=args)
+#             elif p in res:
+#                 res[str(base.Region(chrom=chrom, arm='p'))] = res[p]
+#                 del res[p]
+#             elif q in res:
+#                 res[str(base.Region(chrom=chrom, arm='q'))] = res[q]
+#                 del res[q]
+
+#         for region, state_set in res.items():
+#             if len(state_set) == 2:
+#                 args = {
+#                     'region': region,
+#                     'cn_state': list(state_set)
+#                 }
+#                 yield None, myio.Record(args=args)
 
 class SVBkpLocation():
 
@@ -151,6 +173,10 @@ class SVBkpRegion():
 
         # check the ability to complete walk
         complete_walk, complete_walk_pvalue, complete_walk_runs = self.bkp_complete_walk(region)
+
+        # check CN oscillation
+        
+        max_oscillation = cn_oscillation(1, )
 
         chromothripsis = cluster and random_join and complete_walk
         # genes = set([bp.tran.gene for bp in region.bkp_list if bp.tran])
@@ -270,6 +296,8 @@ class SVBkpRegion():
             region.bkp_join = bkp_join
         return not reject, pvalue
 
+    def cn_oscillation(self, region=None):
+        pass
     def bkp_complete_walk(self, region=None):
         '''
         chromothripsis pattern on reference

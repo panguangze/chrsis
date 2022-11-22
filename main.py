@@ -11,8 +11,8 @@
     @License: LICENSE_NAME, see LICENSE for more details.
 
 Usage:
-    complexsv.py call --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --maxDis=MAXDIS --maxRange=MAXRANGE --cnv_fn=CNV_FN
-    complexsv.py cnv --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --maxDis=MAXDIS --maxRange=MAXRANGE --cnv_fn=CNV_FN
+    complexsv.py call --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --max_dis=max_dis --max_range=max_range --cnv_fn=CNV_FN
+    complexsv.py cnv --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --max_dis=max_dis --max_range=max_range --cnv_fn=CNV_FN
     complexsv.py -h | --help
 
 Options:
@@ -23,8 +23,8 @@ Options:
 """
 
 import os
-import docopt
 from cmath import inf
+import argparse
 
 from bioutensil import constants
 
@@ -90,13 +90,7 @@ class ComplexSVRegionGroupGenerator():
                 return False
         return True
 
-    def hasFBI(self, sv_id, sv):
-        for i in sv_id:
-            if sv[i][0] == sv[i][3] and sv[i][2] != sv[i][5]:
-                return True
-        return False
-
-    def _cluster(self):
+    def _group_sv(self):
         juncs = []
         for i, record in enumerate(self.sv_records):
             if record.chrom_5p not in constants.chrs or record.chrom_3p not in constants.chrs:
@@ -117,7 +111,7 @@ class ComplexSVRegionGroupGenerator():
         # cluster = []
         svIdx = list(range(0, len(juncs))) # sv index for selection
         while len(svIdx) > 0:
-            subcluster = base.RegionGroup(linkage_distance = int(self.args['maxDis']))
+            subcluster = base.RegionGroup(linkage_distance = int(self.args['max_dis']))
             subcluster.append_sv(juncs[svIdx[0]])
             queue = [svIdx[0]] # index of sv_info
             sv, chr_range = juncs[svIdx[0]], {}
@@ -127,10 +121,10 @@ class ComplexSVRegionGroupGenerator():
                 idx = queue[0]
                 queue.pop(0)
                 for i in svIdx:
-                    if self.min_dis(juncs[i], juncs[idx]) < int(self.args['maxDis']):
+                    if self.min_dis(juncs[i], juncs[idx]) < int(self.args['max_dis']):
                         temp_range = chr_range.copy()
                         self.setRange(temp_range, juncs[i])
-                        if self.check_range(temp_range, int(self.args['maxRange'])):
+                        if self.check_range(temp_range, int(self.args['max_range'])):
                             self.setRange(chr_range, juncs[i])
                             queue.append(i)
                             subcluster.append_sv(juncs[i])
@@ -138,10 +132,12 @@ class ComplexSVRegionGroupGenerator():
                             # print(subcluster)
             # if self.hasFBI(subcluster, juncs) == True:
             self.groups.append(subcluster)
+            for r in subcluster.region_list:
+                self._assign_cn_list(self.args['cn_fn'],r)
         # print(self.groups)
     def call(self):
-        # self._group_sv()
-        self._cluster()
+        self._group_sv()
+        # self._cluster()
         cnt_dict = {}
         for i, group in enumerate(self.groups):
             # filter
@@ -195,7 +191,7 @@ class ComplexSVRegionGroupGenerator():
             end = int(region_str.split(':')[1].split('-')[1])
 
             if region.chrom == chrom and start >= region.start and end <= region.end and end - start > 1:
-                region.cn_list.append(base.Region(chrom=chrom, start=start, end=end, cn=cn))
+                region.cn_list.append(base.CN(chrom=chrom, start=start, end=end, cn=cn))
 
     def read(self):
         for group_type in os.listdir(os.path.join(self.out_dir)):
@@ -223,16 +219,16 @@ class ComplexSVRegionGroupGenerator():
                 group = base.RegionGroup(region_list=region_list, group_name=group_id)
                 yield group_type, group
 
-    def _group_sv(self, minimal_distance=1000):  # 1k
-        for i, record in enumerate(self.sv_records):
-            if i > 50:
-                break
-            if record.chrom_5p not in constants.chrs or record.chrom_3p not in constants.chrs:
-                continue
-            if record.chrom_5p == record.chrom_3p and \
-                    abs(record.bkpos_5p - record.bkpos_3p) < minimal_distance:
-                continue
-            self._append_sv_to_groups(record)
+    # def _group_sv(self, minimal_distance=1000):  # 1k
+    #     for i, record in enumerate(self.sv_records):
+    #         if i > 50:
+    #             break
+    #         if record.chrom_5p not in constants.chrs or record.chrom_3p not in constants.chrs:
+    #             continue
+    #         if record.chrom_5p == record.chrom_3p and \
+    #                 abs(record.bkpos_5p - record.bkpos_3p) < minimal_distance:
+    #             continue
+    #         self._append_sv_to_groups(record)
 
     def _append_sv_to_groups(self, record):  # code review
         merge_groups = [group for group in self.groups if True in group.has_sv(record)[0]]
@@ -273,7 +269,7 @@ class ComplexSVRegionGroupGenerator():
 def run_cnv(**args):
     chromothripsis.run_cnv_state(**args)
 
-def run_call(**args):
+def run_csis(**args):
     '''
     regions = [base.Region(chrom=chrom, start=0, end=constants.hg19_fai_bp[chrom]) for chrom in constants.chrs]
     print(regions)
@@ -292,7 +288,8 @@ def run_call(**args):
     ).call()
 
     for g in groups:
-        if g.sv_num() <= MIN_SV_NUM:
+        print([region.sv_ids for region in g.region_list])
+        if g.sv_num <= MIN_SV_NUM:
             # print()
             continue
         # print('group', g.group_type, g.region_list,chromo_metrics["chromothripsis"])
@@ -344,17 +341,19 @@ def run_draw(**args):
     return groups, None
 
 
-def run(call=None,cnv=None, **args):
-    if call:
-        run_call(**args)
-    elif cnv:
-        run_cnv(**args)
 
 
 if __name__ == "__main__":
-    args = docopt.docopt(__doc__)
-    # print(args)
-    new_args = {}
-    for k, v in args.items():
-        new_args[k.replace('--', '')] = v
-    run(**new_args)
+    # complexsv.py call --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --max_dis=max_dis --max_range=max_range --cnv_fn=CNV_FN
+    parser = argparse.ArgumentParser(description='Calling chromothricsis and chromoplexy from SV and CN files')
+    parser.add_argument('--func', dest='func', required=True, default='csis', choices=['csis','other'], help='Sub functions')
+    parser.add_argument('--sv_fn', dest='sv_fn', required=True, help='vcf or tsv')
+    parser.add_argument('--cn_fn', dest='cn_fn', required=False, help='Segment CN file')
+    parser.add_argument('--tool', dest='tool', required=False, help='SV calling tool')
+    parser.add_argument('--out_dir', dest='out_dir', required=False, help='Output dir')
+    parser.add_argument('--max_dis', dest='max_dis', required=False, type=int, default=10000000, help='Maximum distance of two SVs grouped in a cluster')
+    parser.add_argument('--max_range', dest='max_range', required=False, type=int, default=500000000, help='Maximum range of a cluster')
+
+    args = parser.parse_args()
+
+    run_csis(**vars(args))

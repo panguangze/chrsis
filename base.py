@@ -95,6 +95,7 @@ class RegionGroup(myio.Record):
 
     @property
     def sv_num(self):
+        print([region.sv_list for region in self.region_list])
         return len(set(sum([region.sv_ids for region in self.region_list], [])))
 
     @property
@@ -136,6 +137,12 @@ class RegionGroup(myio.Record):
     def __str__(self):
         return str(self.region_list)
 
+class CN(object):
+    def __init__(self, chrom,start,end,cn):
+        self.chrom = chrom
+        self.start = start
+        self.end = end
+        self.cn = cn
 
 class Region(myio.Record):
 
@@ -165,6 +172,7 @@ class Region(myio.Record):
             self.read_sv_fn(sv_fn)
 
         self.cn_list = cn_list or []
+        self.merged_cn_list = []
         self.cn = cn
 
         self.enhancer_list = enhancer_list or []
@@ -182,6 +190,28 @@ class Region(myio.Record):
             else:
                 self.append_sv(sv)
     '''
+
+    def merge_cn_list(self):
+        '''
+        merge cn list: 1 1 1 1 2 2 1 2 2 1 1 -> 1 2 1 2 1
+        '''
+        prev_cn = self.cn_list[0].cn
+        prev_chrom = self.cn_list[0].chrom
+        prev_start = self.cn_list[0].start
+        prev_end = self.cn_list[0].end
+        for item in self.cn_list[1:]:
+            # if break, create a new CN obj
+            if item.cn != prev_cn or item.chrom != prev_chrom:
+                self.merged_cn_list.append(CN(prev_chrom, prev_start, prev_end, prev_cn))
+                prev_cn = self.cn_list[0].cn
+                prev_chrom = self.cn_list[0].chrom
+                prev_start = self.cn_list[0].start
+                prev_end = self.cn_list[0].end
+            else:
+                prev_end = item.cn
+        # create the last one
+        self.merge_cn_list.append(CN(prev_chrom, prev_start, prev_end, prev_cn))
+
 
     def expand(self):
         start = self.start - self.margin
