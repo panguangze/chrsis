@@ -25,6 +25,7 @@ Options:
 import os
 from cmath import inf
 import argparse
+import sys
 
 from bioutensil import constants
 
@@ -269,7 +270,7 @@ class ComplexSVRegionGroupGenerator():
 def run_cnv(**args):
     chromothripsis.run_cnv_state(**args)
 
-def run_csis(**args):
+def run_csis(sv_file_type,**args):
     '''
     regions = [base.Region(chrom=chrom, start=0, end=constants.hg19_fai_bp[chrom]) for chrom in constants.chrs]
     print(regions)
@@ -277,9 +278,11 @@ def run_csis(**args):
     groups = [base.RegionGroup(region_list=[region])]
     '''
     groups = []
-    # sv_records = sv.read_vcf(args['sv_fn'],tool=args['tool'])
     # sv_records = sv.parse(args['sv_fn'])
-    sv_records = sv.read_txt(args['sv_fn'])
+    if sv_file_type == "tsv":
+        sv_records = sv.read_txt(args['sv_fn'])
+    else:
+        sv_records = sv.read_vcf(args['sv_fn'],tool=args['tool'])
     # print(sv_records)
     groups = ComplexSVRegionGroupGenerator(
         groups=groups,
@@ -289,13 +292,14 @@ def run_csis(**args):
 
     for g in groups:
         print([region.sv_ids for region in g.region_list])
-        if g.sv_num <= MIN_SV_NUM:
+        # if g.sv_num <= MIN_SV_NUM:
             # print()
-            continue
+            # continue
         # print('group', g.group_type, g.region_list,chromo_metrics["chromothripsis"])
-        chromo_metrics = chromothripsis.evaluate_region(regions=g.region_list, call='group', search=False, **args)
-        if chromo_metrics["chromothripsis"]:
-            print(g.region_list,chromo_metrics["chromothripsis"])
+        chromo_metrics = chromothripsis.evaluate_region(regions=g.region_list, search=False, **args)
+        for item in chromo_metrics:
+            if item["chromothripsis"]:
+                print(g.region_list,item["chromothripsis"])
         # if chromo_metrics['cluster'] and chromo_metrics['random_walk']:
         # print(chromo_metrics["chromothripsis"])
 
@@ -347,13 +351,19 @@ if __name__ == "__main__":
     # complexsv.py call --sv_fn=IN_FILE --out_dir=OUT_DIR --tool=TOOL --max_dis=max_dis --max_range=max_range --cnv_fn=CNV_FN
     parser = argparse.ArgumentParser(description='Calling chromothricsis and chromoplexy from SV and CN files')
     parser.add_argument('--func', dest='func', required=True, default='csis', choices=['csis','other'], help='Sub functions')
-    parser.add_argument('--sv_fn', dest='sv_fn', required=True, help='vcf or tsv')
+    parser.add_argument('--sv_fn', dest='sv_fn', required=True, help='vcf or tsv (must end with .vcf or .tsv)')
     parser.add_argument('--cn_fn', dest='cn_fn', required=False, help='Segment CN file')
-    parser.add_argument('--tool', dest='tool', required=False, help='SV calling tool')
+    parser.add_argument('--tool', dest='tool', required=False, help='SV calling tool, manta or svaba')
     parser.add_argument('--out_dir', dest='out_dir', required=False, help='Output dir')
     parser.add_argument('--max_dis', dest='max_dis', required=False, type=int, default=10000000, help='Maximum distance of two SVs grouped in a cluster')
     parser.add_argument('--max_range', dest='max_range', required=False, type=int, default=500000000, help='Maximum range of a cluster')
 
     args = parser.parse_args()
-
-    run_csis(**vars(args))
+    
+    if args.sv_fn.lower().endswith('tsv'):
+        sv_fn_extention = "tsv"
+    elif args.sv_fn.lower().endswith('vcf'):
+        sv_fn_extention = "vcf"
+    else:
+        sys.exit("Error: sv_fn file should end with vcf or tsv file")
+    run_csis(sv_file_type= sv_fn_extention, **vars(args))

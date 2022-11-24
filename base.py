@@ -65,15 +65,15 @@ class RegionGroup(myio.Record):
             if self.region_num <= 1:
                 return 'single'
             else:
-                if str(self) == '[chr4:128.568158-128.57017.0.002012M, chr15:75.880429-75.882593.0.002164M]':
-                    print(self)
-                    print(self.sv_num)
-                    print([region.sv_ids for region in self.region_list])
-                    print(sum([region.sv_ids for region in self.region_list], []))
-                    for region in self.region_list:
-                        print(region)
-                        for sv in region.sv_list:
-                            print(sv.id)
+                # if str(self) == '[chr4:128.568158-128.57017.0.002012M, chr15:75.880429-75.882593.0.002164M]':
+                #     print(self)
+                #     print(self.sv_num)
+                #     print([region.sv_ids for region in self.region_list])
+                #     print(sum([region.sv_ids for region in self.region_list], []))
+                #     for region in self.region_list:
+                #         print(region)
+                #         for sv in region.sv_list:
+                #             print(sv.id)
                 return 'single_translocation'
         else:
             chromo_metrics = chromothripsis.evaluate_region(regions=self.region_list, call='group', search=False)
@@ -95,7 +95,6 @@ class RegionGroup(myio.Record):
 
     @property
     def sv_num(self):
-        print([region.sv_list for region in self.region_list])
         return len(set(sum([region.sv_ids for region in self.region_list], [])))
 
     @property
@@ -172,7 +171,7 @@ class Region(myio.Record):
             self.read_sv_fn(sv_fn)
 
         self.cn_list = cn_list or []
-        self.merged_cn_list = []
+        self._merged_cn_list = []
         self.cn = cn
 
         self.enhancer_list = enhancer_list or []
@@ -191,7 +190,7 @@ class Region(myio.Record):
                 self.append_sv(sv)
     '''
 
-    def merge_cn_list(self):
+    def _merge_cn_list(self):
         '''
         merge cn list: 1 1 1 1 2 2 1 2 2 1 1 -> 1 2 1 2 1
         '''
@@ -202,15 +201,15 @@ class Region(myio.Record):
         for item in self.cn_list[1:]:
             # if break, create a new CN obj
             if item.cn != prev_cn or item.chrom != prev_chrom:
-                self.merged_cn_list.append(CN(prev_chrom, prev_start, prev_end, prev_cn))
-                prev_cn = self.cn_list[0].cn
-                prev_chrom = self.cn_list[0].chrom
-                prev_start = self.cn_list[0].start
-                prev_end = self.cn_list[0].end
+                self._merged_cn_list.append(CN(prev_chrom, prev_start, prev_end, prev_cn))
+                prev_cn = item.cn
+                prev_chrom = item.chrom
+                prev_start = item.start
+                prev_end = item.end
             else:
-                prev_end = item.cn
+                prev_end = item.end
         # create the last one
-        self.merge_cn_list.append(CN(prev_chrom, prev_start, prev_end, prev_cn))
+        self._merged_cn_list.append(CN(prev_chrom, prev_start, prev_end, prev_cn))
 
 
     def expand(self):
@@ -230,6 +229,14 @@ class Region(myio.Record):
         if self.start is None or self.end is None:
             return ''
         return '{}M'.format((self.end-self.start)/1000000.0)
+
+    @property
+    def cn_vec(self):
+        # empty
+        if not self._merged_cn_list:
+            self._merge_cn_list()
+        return [item.cn for item in self._merged_cn_list]
+            
 
     @property
     def sv_ids(self):

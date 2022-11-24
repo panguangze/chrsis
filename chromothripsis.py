@@ -26,12 +26,12 @@ def rle(data: str):
 
 def max_oscillation(x, vec):
     vec_l = len(vec)
-    diff = vec[0:(vec_l - 2)] - vec[2: vec_l]
+    diff = [a - b for a,b in zip( vec[0:(vec_l - 2)], vec[2: vec_l])]
     oscillation = [x if i == 0 else 0 for i in diff]
     rle_vec = rle(oscillation)
     x_oscillation_values = []
     for idx, item in enumerate(rle_vec):
-        if idx % 2 == 0 and idx == x:
+        if idx % 2 == 0 and item == x:
             x_oscillation_values.append(rle_vec[idx + 1])
     return max(x_oscillation_values)
 # class CNVState(module.Module):
@@ -176,7 +176,7 @@ class SVBkpRegion():
 
         # check CN oscillation
         
-        max_oscillation = cn_oscillation(1, )
+        oscillation_value = self.cn_oscillation(region)
 
         chromothripsis = cluster and random_join and complete_walk
         # genes = set([bp.tran.gene for bp in region.bkp_list if bp.tran])
@@ -297,7 +297,15 @@ class SVBkpRegion():
         return not reject, pvalue
 
     def cn_oscillation(self, region=None):
-        pass
+        if region:
+            cn_vec = region.cn_vec
+            return [max_oscillation(1, cn_vec)]
+        else:
+            osci_values = []
+            for r in self.regions:
+                cn_vec = r.cn_vec
+                osci_values.append(max_oscillation(1, cn_vec))
+                return osci_values
     def bkp_complete_walk(self, region=None):
         '''
         chromothripsis pattern on reference
