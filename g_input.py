@@ -15,7 +15,7 @@ def generate_seg():
     parser.add_argument('-d', '--wgs_depth', dest='wgsDepth', required=False, type=int, default = 0, help='The whole genome average depth')
     args = parser.parse_args()
     # find all breakpoints on each chromosome
-    sv, pos = [], {}
+    all_sv, pos = [], {}
     sv_records = sv.read_vcf(args.svPath, tool=args.tool, precise=False)
     for i, record in enumerate(sv_records):
         info = []
@@ -31,7 +31,7 @@ def generate_seg():
     # for line in open(args.svPath, 'r').readlines()[1:]:
         # info = line.strip('\n').split('\t')
         info[1], info[4] = int(info[1]), int(info[4])
-        sv.append(info)
+        all_sv.append(info)
         if info[0] in pos.keys():
             pos[info[0]].append(info[1])
         else:
