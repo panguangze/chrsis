@@ -44,6 +44,8 @@ class ComplexSVRegionGroupGenerator():
         self.groups = groups or []
         self.bam_fn = bam_fn
         self.args = kwargs
+        self.out_dir = kwargs['out_dir']
+        self.sample = kwargs['sample']
         # print(kwargs)
 
     def compare(self, sv1, sv2):
@@ -177,9 +179,9 @@ class ComplexSVRegionGroupGenerator():
                 region_f.write('{}:{}-{}\n'.format(region.chrom, region.start, region.end))
                 # write sv
                 for sv_re in region.sv_list:
-                    if sv_re.id not in sv_ids:
-                        sv_f.write('{}\n'.format(sv_re))
-                        sv_ids.add(sv_re.id)
+                    # if sv_re.id not in sv_ids:
+                    sv_f.write('{}\n'.format(sv_re))
+                        # sv_ids.add(sv_re.id)
 
     def _assign_cn_list(self, cn_fn, region):
         if not os.path.isfile(cn_fn):
@@ -284,22 +286,25 @@ def run_csis(sv_file_type,**args):
     else:
         sv_records = sv.read_vcf(args['sv_fn'],tool=args['tool'])
     # print(sv_records)
-    groups = ComplexSVRegionGroupGenerator(
+    generator = ComplexSVRegionGroupGenerator(
         groups=groups,
         sv_records=sv_records,
         **args
-    ).call()
+    )
+    groups = generator.call()
 
     for g in groups:
-        print([region.sv_ids for region in g.region_list])
-        # if g.sv_num <= MIN_SV_NUM:
+        # print([region.sv_ids for region in g.region_list])
+        if g.sv_num <= MIN_SV_NUM:
             # print()
-            # continue
+            continue
         # print('group', g.group_type, g.region_list,chromo_metrics["chromothripsis"])
         chromo_metrics = chromothripsis.evaluate_region(regions=g.region_list, search=False, **args)
         for item in chromo_metrics:
             if item["chromothripsis"]:
                 print(g.region_list,item["chromothripsis"])
+                generator._write_group(g)
+                draw([g], **args)
         # if chromo_metrics['cluster'] and chromo_metrics['random_walk']:
         # print(chromo_metrics["chromothripsis"])
 
@@ -320,28 +325,43 @@ def run_csis(sv_file_type,**args):
     # return groups, None
 
 
-def run_draw(**args):
-    reader_cls = base.RegionGroupReader
+def draw(groups,**args):
+    out_fn = os.path.join(args['out_dir'], args['sample'])
+    bplot_complexsv.run(draw=True,
+                    sample=args['sample'],
+                    groups=groups,
+                    out_fn=out_fn)
+
+def run_draw(sv_file_type,**args):
+    groups = []
+    # sv_records = sv.parse(args['sv_fn'])
+    if sv_file_type == "tsv":
+        sv_records = sv.read_txt(args['sv_fn'])
+    else:
+        sv_records = sv.read_vcf(args['sv_fn'],tool=args['tool'])
+    # reader_cls = base.RegionGroupReader
     groups = ComplexSVRegionGroupGenerator(
-        reader_cls=reader_cls,
+        groups=groups,
+        sv_records=sv_records,
         write=False,  # True,
         **args
-    ).evaluate()
-
+    ).call()
     groups = list(groups)
+    # print(groups)
     data = {}
-    for meta, group in groups:
-        if meta in data:
-            data[meta].append((meta, group))
-        else:
-            data[meta] = [(meta, group)]
+    # for  group in groups:
+    #     if meta in data:
+    #         data[meta].append((meta, group))
+    #     else:
+    #         data[meta] = [(meta, group)]
 
-    for meta, group_list in data.items():
-        out_fn = os.path.join(args['out_dir'], '{}.{}.region.svg'.format(args['sample'], meta))
-        bplot_complexsv.run(draw=True,
-                            sample=args['sample'],
-                            groups=group_list,
-                            out_fn=out_fn)
+    # for meta, group_list in data.items():
+    # out_fn = os.path.join(args['out_dir'], '{}.{}.region.svg'.format(args['sample']))
+    out_fn = os.path.join(args['out_dir'], "test.svg")
+    bplot_complexsv.run(draw=True,
+                        sample="test",
+                        groups=groups,
+                        out_fn=out_fn)
     return groups, None
 
 
@@ -353,6 +373,7 @@ if __name__ == "__main__":
     parser.add_argument('--func', dest='func', required=True, default='csis', choices=['csis','other'], help='Sub functions')
     parser.add_argument('--sv_fn', dest='sv_fn', required=True, help='vcf or tsv (must end with .vcf or .tsv)')
     parser.add_argument('--cn_fn', dest='cn_fn', required=False, help='Segment CN file')
+    parser.add_argument('--sample', dest='sample', required=False, help='Segment CN file', default="test")
     parser.add_argument('--tool', dest='tool', required=False, help='SV calling tool, manta or svaba')
     parser.add_argument('--out_dir', dest='out_dir', required=False, help='Output dir')
     parser.add_argument('--max_dis', dest='max_dis', required=False, type=int, default=10000000, help='Maximum distance of two SVs grouped in a cluster')
@@ -367,3 +388,4 @@ if __name__ == "__main__":
     else:
         sys.exit("Error: sv_fn file should end with vcf or tsv file")
     run_csis(sv_file_type= sv_fn_extention, **vars(args))
+    # run_draw(sv_file_type= sv_fn_extention, **vars(args))

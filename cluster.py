@@ -102,7 +102,7 @@ class MainArgParser:
                             queue.append(i)
                             subcluster.append(i)
                             svIdx.remove(i)
-                            print(subcluster)
+                            # print(subcluster)
             if self.hasFBI(subcluster, juncs) == True:
                 cluster.append(subcluster)
         # output a set of sv.txt files
@@ -175,7 +175,7 @@ class MainArgParser:
         if args.wgsDepth!=0 and args.purity!=0:
             for key, value in segDepth.items():
                 segDepth[key] = self.depth2cn(value, args.wgsDepth, args.purity)
-                print(key, segDepth[key])
+                # print(key, segDepth[key])
         resStr = ''
         for key, value in segDepth.items():
             resStr += key+'\t'+str(value)+'\n'

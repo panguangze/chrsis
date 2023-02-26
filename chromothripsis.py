@@ -14,7 +14,6 @@ from bioutensil import module
 # Python code for run length encoding
 # wwwwaaadexxxxxxww -> [w 4 a 3 d 1 e 1 x 6 w 2]
 def rle(data: str):
-    
     seq = [data[0], 1]
 
     for elem in data[1:]:
@@ -27,12 +26,16 @@ def rle(data: str):
 def max_oscillation(x, vec):
     vec_l = len(vec)
     diff = [a - b for a,b in zip( vec[0:(vec_l - 2)], vec[2: vec_l])]
+    if not diff:
+        return 0
     oscillation = [x if i == 0 else 0 for i in diff]
     rle_vec = rle(oscillation)
     x_oscillation_values = []
     for idx, item in enumerate(rle_vec):
         if idx % 2 == 0 and item == x:
             x_oscillation_values.append(rle_vec[idx + 1])
+    if not x_oscillation_values:
+        return 0
     return max(x_oscillation_values)
 # class CNVState(module.Module):
 
@@ -178,7 +181,9 @@ class SVBkpRegion():
         
         oscillation_value = self.cn_oscillation(region)
 
-        chromothripsis = cluster and random_join and complete_walk
+        chromothripsis = sum(oscillation_value) >= 6 and random_join and (cluster or complete_walk)
+        # chromothripsis = random_join and cluster and complete_walk
+        # chromothripsis = sum(oscillation_value) >= 6 and [random_join,cluster,complete_walk].count(True) >= 2
         # genes = set([bp.tran.gene for bp in region.bkp_list if bp.tran])
         # print region, len(region.bkp_list), len(genes), chromothripsis, cluster, random_join, complete_walk, complete_walk_runs, region.bkp_join, ','.join(genes)
         # print (region, len(region.bkp_list), len(genes), ','.join(genes))
@@ -193,6 +198,7 @@ class SVBkpRegion():
             'complete_walk': complete_walk,
             'complete_walk_pvalue': complete_walk_pvalue,
             'complete_walk_runs': complete_walk_runs,
+            'oscillation_value': oscillation_value,
             # 'bkp_list': bkp_list,
             # 'bkp_join': bkp_join,
         }
@@ -228,17 +234,17 @@ class SVBkpRegion():
             breakpoint cluster together
         '''
         if region:
-            bkp_list = [bkp.bkpos for bkp in region.bkp_list]
+            bkps = [bkp for bkp in region.bkp_list]
         else:
             # bkp_list = [bkp.bkpos for r in self.regions for bkp in r.bkp_list]
             bkps = [bkp for r in self.regions for bkp in r.bkp_list]
             # bkps.sort(key = lambda x : x.bkpos)
-            bkps_no_dup = []
-            bkps_no_dup.append(bkps[0])
-            for i in range(1, len(bkps)):
-                if bkps[i].bkpos != bkps[i - 1].bkpos:
-                    bkps_no_dup.append(bkps[i])
-            bkp_list = [bkp.bkpos for bkp in bkps_no_dup]
+        bkps_no_dup = []
+        bkps_no_dup.append(bkps[0])
+        for i in range(1, len(bkps)):
+            if bkps[i].bkpos != bkps[i - 1].bkpos:
+                bkps_no_dup.append(bkps[i])
+        bkp_list = [bkp.bkpos for bkp in bkps_no_dup]
 
         adjacent_distances = [x - y for x, y in zip(bkp_list[1:], bkp_list[:-1])]
         reject, pvalue = significant_test.exponent_distribution(adjacent_distances)
@@ -273,16 +279,16 @@ class SVBkpRegion():
             breakpoints joint randomly
         """
         if region:
-            bkp_join = [bkp.join_type for bkp in region.bkp_list]
+            bkps = [bkp for bkp in region.bkp_list]
         else:
             bkps = [bkp for r in self.regions for bkp in r.bkp_list]
             # bkps.sort(key = lambda x : x.bkpos)
-            bkps_no_dup = []
-            bkps_no_dup.append(bkps[0])
-            for i in range(1, len(bkps)):
-                if bkps[i].bkpos != bkps[i - 1].bkpos:
-                    bkps_no_dup.append(bkps[i])
-            bkp_join = [bkp.join_type for bkp in bkps_no_dup]
+        bkps_no_dup = []
+        bkps_no_dup.append(bkps[0])
+        for i in range(1, len(bkps)):
+            if bkps[i].bkpos != bkps[i - 1].bkpos:
+                bkps_no_dup.append(bkps[i])
+        bkp_join = [bkp.join_type for bkp in bkps_no_dup]
             # bkp_join = [bkp.join_type for r in self.regions for bkp in r.bkp_list]
 
         bkp_join = collections.Counter(bkp_join)
@@ -305,7 +311,7 @@ class SVBkpRegion():
             for r in self.regions:
                 cn_vec = r.cn_vec
                 osci_values.append(max_oscillation(1, cn_vec))
-                return osci_values
+            return osci_values
     def bkp_complete_walk(self, region=None):
         '''
         chromothripsis pattern on reference
@@ -343,20 +349,20 @@ class SVBkpRegion():
 
         '''
         if region:
-            bkp_orientation = [bkp.orientation for bkp in region.bkp_list]
+            bkps = [bkp for bkp in region.bkp_list]
         else:
             # bkps = []
             # for r in self.regions:
             #     for bkp in r.bkp_list:
             #         if bkp
             bkps = [bkp for r in self.regions for bkp in r.bkp_list]
-            bkps.sort(key = lambda x : x.bkpos)
-            bkps_no_dup = []
-            bkps_no_dup.append(bkps[0])
-            for i in range(1, len(bkps)):
-                if bkps[i].bkpos != bkps[i - 1].bkpos:
-                    bkps_no_dup.append(bkps[i])
-            bkp_orientation = [b.orientation for b in bkps_no_dup]
+        bkps.sort(key = lambda x : x.bkpos)
+        bkps_no_dup = []
+        bkps_no_dup.append(bkps[0])
+        for i in range(1, len(bkps)):
+            if bkps[i].bkpos != bkps[i - 1].bkpos:
+                bkps_no_dup.append(bkps[i])
+        bkp_orientation = [b.orientation for b in bkps_no_dup]
 
         reject, pvalue, n_runs = significant_test.wald_wolfowitz_test(bkp_orientation)
         if reject is None:
@@ -432,7 +438,6 @@ def run_call(sv_module=None, **args):
     cnv_states, _ = run_cnv_state(**args)
 
     regions = [x.region for m, x in cnv_states]
-    print(regions)
     # regions = [base.Region(chrom=chrom, start=0, end=constants.hg19_fai_bp[chrom]) for chrom in constants.chrs]
     evaluate_region(sv_module=sv_module, regions=regions, search=False, **args)
 

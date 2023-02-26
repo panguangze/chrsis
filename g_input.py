@@ -11,6 +11,7 @@ def generate_seg():
     parser.add_argument('-sv', '--sv_file', dest='svPath', required=True, help='Path to SV file')
     parser.add_argument('--tool', dest='tool', required=False, help='SV calling tool, manta or svaba')
     parser.add_argument('-bam', '--bam_file', dest='bamPath', required=False, help='Path to BAM file')
+    parser.add_argument('-p', '--purity', required=False, type=int, default= 1,help='Tumor purity')
     parser.add_argument('-s', '--sample_name', dest='sampleName', required=False, default = 'sample', help='Sample name for output file')
     parser.add_argument('-d', '--wgs_depth', dest='wgsDepth', required=False, type=int, default = 0, help='The whole genome average depth')
     args = parser.parse_args()
@@ -70,7 +71,7 @@ def generate_seg():
     if args.wgsDepth!=0 and args.purity!=0:
         for key, value in segDepth.items():
             segDepth[key] = depth2cn(value, args.wgsDepth, args.purity)
-            print(key, segDepth[key])
+            # print(key, segDepth[key])
     resStr = ''
     for key, value in segDepth.items():
         resStr += key+'\t'+str(value)+'\n'

@@ -150,8 +150,8 @@ class RegionGroupsPlot(svgfigure.SVGFigure):
         self.figsize = kwargs['size']
 
         self.sv_join_width = sv_join_width or 100
-
-        super().__init__(fn=out_fn, **kwargs)
+        self.out_prefix = out_fn
+        super().__init__(out_prefix = out_fn, **kwargs)
 
     def _measure_group(self, group, i):
         length = 0
@@ -187,7 +187,7 @@ class RegionGroupsPlot(svgfigure.SVGFigure):
 
     def draw(self):
         for i, group in enumerate(self.groups):
-            meta, group = group
+            group = group
             self._measure_group(group, i)
             self._draw_group(group)
 
@@ -372,12 +372,12 @@ def run_call(sample=None, region_fn=None, sv_fn=None, **args):
     # run_draw(region_fn, records)
 
 
-def run_draw(groups=None, out_dir=None, **args):
+def run_draw(groups=None, out_dir=None,out_fn=None, **args):
     title = 'Join Type'
     groups = list(groups)
     group_width = 250
     size = (2500, group_width * len(groups) + 200)
-    plot = RegionGroupsPlot(groups=groups, out_dir=out_dir, title=title, size=size,
+    plot = RegionGroupsPlot(groups=groups, out_fn=out_fn, title=title, size=size,
                             group_width=group_width,
                             **args)
     plot.draw()
@@ -387,6 +387,7 @@ def run(call=None, draw=None, **args):
     if call:
         run_call(**args)
     if draw:
+        # print(**args)
         run_draw(**args)
 
 

@@ -17,7 +17,7 @@ from bioutensil import myio
 
 import chromothripsis
 
-
+CROSS_CHR_MIN_DISS = 1000
 class RegionGroup(myio.Record):
 
     fields = ['region_list']
@@ -76,9 +76,9 @@ class RegionGroup(myio.Record):
                 #             print(sv.id)
                 return 'single_translocation'
         else:
-            chromo_metrics = chromothripsis.evaluate_region(regions=self.region_list, call='group', search=False)
-            if chromo_metrics['cluster'] and chromo_metrics['complete_walk']:
-                return 'chromothripsis'
+            # chromo_metrics = chromothripsis.evaluate_region(regions=self.region_list, call='group', search=False)
+            # if chromo_metrics['cluster'] and chromo_metrics['complete_walk']:
+            #     return 'chromothripsis'
             return 'group'
 
     @property
@@ -95,7 +95,8 @@ class RegionGroup(myio.Record):
 
     @property
     def sv_num(self):
-        return len(set(sum([region.sv_ids for region in self.region_list], [])))
+        return len(list(id for region in self.region_list for id in region.sv_list ))
+        # return len(set(sum([region.sv_ids for region in self.region_list], [])))
 
     @property
     def region_num(self):
@@ -122,6 +123,8 @@ class RegionGroup(myio.Record):
             region.append_sv(sv, self.tran_psl_reader)
             self.append_region(region)
         else:
+            tmppp = 4
+            # pass
             region = Region(chrom=sv.chrom_5p, start=sv.bkpos_5p, end=sv.bkpos_5p, linkage_distance=self.linkage_distance)
             region.append_sv(sv, self.tran_psl_reader)
             self.append_region(region)
@@ -166,6 +169,7 @@ class Region(myio.Record):
 
         self.bkp_list = bkp_list or []
         self.sv_list = sv_list or []
+        self.cross_chr_sv_list = []
 
         if not self.sv_list and sv_fn:
             self.read_sv_fn(sv_fn)
@@ -189,11 +193,48 @@ class Region(myio.Record):
             else:
                 self.append_sv(sv)
     '''
+# TODO 可能可以优化
+    def have_relation(self, other_region):
+        same_count = 0
+        same_sv = []
+        for sv in self.cross_chr_sv_list:
+            for osv in other_region.cross_chr_sv_list:
+                if sv.id == osv.id:
+                    same_count = same_count + 1
+                    same_sv.append(sv)
+        if same_count < 2:
+            return False
+        coords_1 = [same_sv[0].bkpos_5p]
+        coords_2 = [same_sv[0].bkpos_3p]
+
+        for sv in same_sv[1:]:
+            if sv.chrom_5p == same_sv[0].chrom_5p:
+                coords_1.append(sv.bkpos_5p)
+                coords_2.append(sv.bkpos_3p)
+            else:
+                coords_1.append(sv.bkpos_3p)
+                coords_2.append(sv.bkpos_5p)
+        t1 = False
+        t2 = False
+        for a,b in zip( coords_1[0:len(coords_1) - 1], coords_1[1: len(coords_1)]):
+            # 或许单独一个距离
+            if 20 < a - b <= self.linkage_distance:
+                t1 = True
+                break
+        for a,b in zip( coords_2[0:len(coords_2) - 1], coords_2[1: len(coords_2)]):
+            # TODO manta call的结果两条记录不一致？所以加20<或许单独一个距离
+            if 20 < a - b <= self.linkage_distance:
+                t2 = True
+                break
+        return t1 and t2
+
 
     def _merge_cn_list(self):
         '''
         merge cn list: 1 1 1 1 2 2 1 2 2 1 1 -> 1 2 1 2 1
         '''
+        if not self.cn_list:
+            return
         prev_cn = self.cn_list[0].cn
         prev_chrom = self.cn_list[0].chrom
         prev_start = self.cn_list[0].start
@@ -235,7 +276,7 @@ class Region(myio.Record):
         # empty
         if not self._merged_cn_list:
             self._merge_cn_list()
-        return [item.cn for item in self._merged_cn_list]
+        return [round(item.cn) for item in self._merged_cn_list]
             
 
     @property
@@ -297,6 +338,8 @@ class Region(myio.Record):
 
         self.bkp_list = self.bkp_list + other.bkp_list
         self.sv_list = self.sv_list + other.sv_list
+        self.cross_chr_sv_list = self.cross_chr_sv_list + other.cross_chr_sv_list
+
 
         self.enhancer_list = self.enhancer_list + other.enhancer_list
         self.super_enhancer_list = self.super_enhancer_list + other.enhancer_list
@@ -334,6 +377,8 @@ class Region(myio.Record):
         sv.tran_3p = bkp_3p.tran
 
         self.sv_list.append(sv)
+        if sv.chrom_5p != sv.chrom_3p:
+            self.cross_chr_sv_list.append(sv)
 
     def has_chrom(self, chrom):
         return chrom == self.chrom

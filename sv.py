@@ -305,6 +305,7 @@ class SVRecord(myio.Record):
 
     @property
     def precise(self):
+        return True
         if self.junc_reads >= 10:
             return True
         else:
@@ -326,6 +327,8 @@ class SVRecord(myio.Record):
             return get_orientation_by_strand(self, constants.chrs)
             # return None
         alt = self.parent.ALT[0]
+        if '[' not in str(alt) or ']' not in str(alt):
+            return get_orientation_by_strand(self, constants.chrs)
         if alt.remoteOrientation and alt.orientation:
             o = 'tt'
         elif not alt.remoteOrientation and not alt.orientation:
@@ -375,7 +378,10 @@ class SVRecord(myio.Record):
             else:
                 return self.sv_type
         except Exception:
-            return self.meta_info.get('VARTYPE', None)
+            if self.tool == 'manta':
+                return self.meta_info.get('SVTYPE', None)
+            else:
+                return self.meta_info.get('VARTYPE', None)
 
 def read_txt(vcf_fn,**args):
     fin = open(vcf_fn)
